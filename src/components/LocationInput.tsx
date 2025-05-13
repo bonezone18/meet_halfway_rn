@@ -1,4 +1,4 @@
-/*import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import {
   View,
   TextInput,
@@ -12,24 +12,12 @@ import {
 import { useLocationStore } from "../state/stores/locationStore";
 import * as googleMapsApi from "../api/googleMapsApi";
 import { PlaceSuggestion, Location as LocationModel } from "../models/placeTypes";
-import { ApiError } from "../api/types";
-*/
+import { ApiError } from "../api/types"; // Make sure this path is correct and ApiError is exported from types.ts
 
-import React, { useState } from "react"; // Removed useCallback
-import {
-  View,
-  TextInput,
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  FlatList,
-  Keyboard,
-} from "react-native";
-import { useLocationStore } from "../state/stores/locationStore";
-import * as googleMapsApi from "../api/googleMapsApi";
-import { PlaceSuggestion, Location as LocationModel } from "../models/placeTypes";
-// ApiError import removed as it was unused in this specific file
+// Helper type guard to check for ApiError
+function isApiError(response: any): response is ApiError {
+  return response && typeof response.message === 'string';
+}
 
 interface LocationInputProps {
   isLocationA: boolean;
@@ -40,9 +28,8 @@ const LocationInput: React.FC<LocationInputProps> = ({ isLocationA, placeholder 
   const {
     setLocationA,
     setLocationB,
-    // Ensure these are renamed in your locationStore.ts file:
-    fetchCurrentLocationA, // formerly useCurrentLocationForA
-    fetchCurrentLocationB, // formerly useCurrentLocationForB
+    fetchCurrentLocationA,
+    fetchCurrentLocationB,
     isLoadingA,
     isLoadingB,
   } = useLocationStore();
@@ -60,14 +47,12 @@ const LocationInput: React.FC<LocationInputProps> = ({ isLocationA, placeholder 
       setIsFetchingSuggestions(true);
       setShowSuggestions(true);
       const result = await googleMapsApi.getPlaceSuggestions(text);
-      // Check if result is not an ApiError-like object before setting suggestions
-      if (result && !(result as any).message && Array.isArray(result)) {
-        setSuggestions(result as PlaceSuggestion[]);
-      } else if ((result as any).message) {
-        console.error("Error fetching place suggestions:", (result as any).message);
-        setSuggestions([]); // Clear suggestions on error
+      if (isApiError(result)) {
+        console.error("Error fetching place suggestions:", result.message);
+        setSuggestions([]);
       } else {
-        setSuggestions([]); // Clear if not an array or unexpected format
+        // result is PlaceSuggestion[] here
+        setSuggestions(result);
       }
       setIsFetchingSuggestions(false);
     } else {
@@ -83,10 +68,15 @@ const LocationInput: React.FC<LocationInputProps> = ({ isLocationA, placeholder 
     Keyboard.dismiss();
 
     const placeDetailsResult = await googleMapsApi.getPlaceDetails(suggestion.place_id);
-    if (placeDetailsResult && !(placeDetailsResult as any).message) {
+
+    if (isApiError(placeDetailsResult)) {
+      console.error("Error fetching place details:", placeDetailsResult.message);
+      // Optionally, inform the user via an alert or toast message
+    } else {
+      // placeDetailsResult is LocationModel (aliased from Location) here
       const location: LocationModel = {
-        name: placeDetailsResult.name,
-        address: placeDetailsResult.address,
+        name: placeDetailsResult.name, // name is optional in LocationModel, ensure it's handled if undefined
+        address: placeDetailsResult.address, // address is optional
         latitude: placeDetailsResult.latitude,
         longitude: placeDetailsResult.longitude,
       };
@@ -95,16 +85,14 @@ const LocationInput: React.FC<LocationInputProps> = ({ isLocationA, placeholder 
       } else {
         setLocationB(location);
       }
-    } else {
-      console.error("Error fetching place details:", (placeDetailsResult as any).message);
     }
   };
 
   const handleUseCurrentLocation = async () => {
     if (isLocationA) {
-      await fetchCurrentLocationA(); // Use the renamed async function
+      await fetchCurrentLocationA();
     } else {
-      await fetchCurrentLocationB(); // Use the renamed async function
+      await fetchCurrentLocationB();
     }
     setInputValue("Current Location"); 
     setShowSuggestions(false);
@@ -124,7 +112,6 @@ const LocationInput: React.FC<LocationInputProps> = ({ isLocationA, placeholder 
             }
           }}
           onBlur={() => {
-            // Delay hiding suggestions to allow press on suggestion item
             setTimeout(() => {
               setShowSuggestions(false);
             }, 150);
@@ -150,7 +137,7 @@ const LocationInput: React.FC<LocationInputProps> = ({ isLocationA, placeholder 
                   <Text>{item.description}</Text>
                 </TouchableOpacity>
               )}
-              keyboardShouldPersistTaps="handled" // Important for scrollable suggestions
+              keyboardShouldPersistTaps="handled"
             />
           )}
           {!isFetchingSuggestions && suggestions.length === 0 && inputValue.length > 2 && (
@@ -165,8 +152,6 @@ const LocationInput: React.FC<LocationInputProps> = ({ isLocationA, placeholder 
 const styles = StyleSheet.create({
   container: {
     marginBottom: 16,
-    // Ensure the container can host absolutely positioned children if suggestions overflow
-    // zIndex might be needed if other elements overlap, but usually `position: absolute` on child is enough
   },
   inputRow: {
     flexDirection: "row",
@@ -192,7 +177,7 @@ const styles = StyleSheet.create({
   },
   suggestionsContainer: {
     position: "absolute",
-    top: 50, // Adjust this based on your input field's height + a small margin
+    top: 50, 
     left: 0,
     right: 0,
     backgroundColor: "#FFF",
@@ -200,7 +185,7 @@ const styles = StyleSheet.create({
     borderColor: "#DDD",
     borderRadius: 8,
     maxHeight: 200,
-    zIndex: 1000, // Ensure suggestions appear above other elements
+    zIndex: 1000, 
   },
   suggestionItem: {
     padding: 12,

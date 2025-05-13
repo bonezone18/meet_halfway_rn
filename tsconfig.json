@@ -3,7 +3,13 @@
   "compilerOptions": {
     "types": ["react", "react-native"],
     "resolveJsonModule": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "jsx": "react"
   },
-  "include": ["env.d.ts", "src"]
+  "include": ["env.d.ts", "src"],
+  "exclude": ["node_modules"]
 }

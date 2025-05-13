@@ -1,7 +1,7 @@
+// src/api/googleMapsApi.ts
 import axios from "axios";
 import env from "../config/env";
-import { Location } from "../models/locationTypes";
-import { Place, PlaceSuggestion } from "../models/placeTypes";
+import { Location, Place, PlaceSuggestion } from "../models/placeTypes"; // Ensure Place is imported
 import {
   GeocodingResponse,
   NearbySearchResponse,
@@ -19,7 +19,7 @@ const apiClient = axios.create({
   params: {
     key: GOOGLE_MAPS_API_KEY,
   },
-});
+}) ;
 
 const handleApiError = (error: any, defaultMessage: string): ApiError => {
   if (axios.isAxiosError(error) && error.response) {
@@ -33,9 +33,8 @@ const handleApiError = (error: any, defaultMessage: string): ApiError => {
   return { message: error.message || defaultMessage };
 };
 
-/**
- * Geocodes a human-readable address into geographic coordinates.
- */
+// ... (geocodeAddress, reverseGeocode, getPlaceSuggestions remain the same)
+
 export const geocodeAddress = async (address: string): Promise<Location | ApiError> => {
   if (!GOOGLE_MAPS_API_KEY) return { message: "API key is missing" };
   try {
@@ -48,7 +47,7 @@ export const geocodeAddress = async (address: string): Promise<Location | ApiErr
         latitude: lat,
         longitude: lng,
         address: response.data.results[0].formatted_address,
-        name: address, // Or derive a better name if possible
+        name: address, 
       };
     }
     return { message: response.data.error_message || `Failed to geocode: ${response.data.status}`, status: response.data.status };
@@ -57,9 +56,6 @@ export const geocodeAddress = async (address: string): Promise<Location | ApiErr
   }
 };
 
-/**
- * Converts geographic coordinates to a human-readable address.
- */
 export const reverseGeocode = async (latitude: number, longitude: number): Promise<Location | ApiError> => {
   if (!GOOGLE_MAPS_API_KEY) return { message: "API key is missing" };
   try {
@@ -71,11 +67,10 @@ export const reverseGeocode = async (latitude: number, longitude: number): Promi
         latitude,
         longitude,
         address: response.data.results[0].formatted_address,
-        name: response.data.results[0].formatted_address.split(",")[0], // Use first part of address as name
-        isCurrentLocation: true, // Assuming this is used for current location reverse geocoding
+        name: response.data.results[0].formatted_address.split(",")[0],
+        isCurrentLocation: true, 
       };
     }
-    // Fallback if no address found but coordinates are valid
     if (response.data.status === "ZERO_RESULTS") {
         return {
             latitude,
@@ -91,9 +86,6 @@ export const reverseGeocode = async (latitude: number, longitude: number): Promi
   }
 };
 
-/**
- * Gets place autocomplete suggestions based on user input.
- */
 export const getPlaceSuggestions = async (input: string): Promise<PlaceSuggestion[] | ApiError> => {
   if (!GOOGLE_MAPS_API_KEY) return { message: "API key is missing" };
   if (input.trim().length === 0) return [];
@@ -116,24 +108,44 @@ export const getPlaceSuggestions = async (input: string): Promise<PlaceSuggestio
 
 /**
  * Retrieves detailed information for a specific place using its place ID.
+ * Returns a full Place object or an ApiError.
  */
-export const getPlaceDetails = async (placeId: string): Promise<Location | ApiError> => {
+export const getPlaceDetails = async (placeId: string): Promise<Place | ApiError> => {
   if (!GOOGLE_MAPS_API_KEY) return { message: "API key is missing" };
   try {
     const response = await apiClient.get<PlaceDetailsResponse>("/place/details/json", {
       params: {
         place_id: placeId,
-        fields: "formatted_address,geometry,name", // Add more fields as needed from Place model
+        // Request fields needed for the Place model
+        fields: "place_id,name,formatted_address,geometry,vicinity,photos,rating,user_ratings_total,opening_hours,types,price_level,website,international_phone_number,reviews,icon_mask_base_uri,icon_background_color,icon"
       },
     });
+
     if (response.data.status === "OK") {
       const { result } = response.data;
-      return {
+      // Map the API result to our Place model
+      const place: Place = {
+        placeId: result.place_id || placeId, // Ensure placeId is set
+        name: result.name || "Unknown Place",
+        address: result.formatted_address || result.vicinity,
+        vicinity: result.vicinity,
         latitude: result.geometry.location.lat,
         longitude: result.geometry.location.lng,
-        address: result.formatted_address,
-        name: result.name,
+        rating: result.rating,
+        userRatingsTotal: result.user_ratings_total,
+        photos: result.photos, // This is an array of photo objects from API
+        photoReference: result.photos?.[0]?.photo_reference, // Keep for convenience if needed for a primary photo
+        openingHours: result.opening_hours ? {
+          open_now: result.opening_hours.open_now,
+          weekday_text: result.opening_hours.weekday_text,
+        } : undefined,
+        types: result.types || [],
+        priceLevel: result.price_level,
+        icon: result.icon, // Google Places icon URL
+        // distanceFromMidpoint will be calculated later if needed, not available from this API directly
+        distanceFromMidpoint: 0, // Placeholder or remove if not set here
       };
+      return place;
     }
     return { message: response.data.error_message || `Failed to get place details: ${response.data.status}`, status: response.data.status };
   } catch (error) {
@@ -141,14 +153,12 @@ export const getPlaceDetails = async (placeId: string): Promise<Location | ApiEr
   }
 };
 
-/**
- * Searches for places near the specified midpoint location.
- * Note: This is a simplified version. The original Flutter app had more complex logic for types and radius.
- */
+// ... (searchNearbyPlaces, getPhotoUrl, getDirections, getStaticMapUrl remain the same or can be reviewed separately)
+
 export const searchNearbyPlaces = async (
   location: Location,
-  radius: number = 5000, // in meters
-  type?: string // e.g., "restaurant", "cafe"
+  radius: number = 5000, 
+  type?: string 
 ): Promise<Place[] | ApiError> => {
   if (!GOOGLE_MAPS_API_KEY) return { message: "API key is missing" };
   try {
@@ -167,7 +177,7 @@ export const searchNearbyPlaces = async (
         latitude: p.geometry.location.lat,
         longitude: p.geometry.location.lng,
         vicinity: p.vicinity,
-        address: p.formatted_address, // Nearby search might not return formatted_address, vicinity is more common
+        address: p.formatted_address, 
         rating: p.rating,
         userRatingsTotal: p.user_ratings_total,
         photoReference: p.photos?.[0]?.photo_reference,
@@ -176,9 +186,7 @@ export const searchNearbyPlaces = async (
         types: p.types,
         priceLevel: p.price_level,
         icon: p.icon,
-        // Distance from midpoint needs to be calculated separately if this function is called with the midpoint
-        // The original Flutter app calculated this in the PlaceService/Provider after fetching.
-        distanceFromMidpoint: 0, // Placeholder, to be calculated later
+        distanceFromMidpoint: 0, 
       }));
     }
     if (response.data.status === "ZERO_RESULTS") return [];
@@ -188,9 +196,6 @@ export const searchNearbyPlaces = async (
   }
 };
 
-/**
- * Constructs the URL for retrieving a place photo.
- */
 export const getPhotoUrl = (photoReference: string, maxWidth: number = 400): string | null => {
   if (!GOOGLE_MAPS_API_KEY) {
     console.warn("API key is missing for photo URL");
@@ -199,9 +204,6 @@ export const getPhotoUrl = (photoReference: string, maxWidth: number = 400): str
   return `${BASE_URL}/place/photo?maxwidth=${maxWidth}&photoreference=${photoReference}&key=${GOOGLE_MAPS_API_KEY}`;
 };
 
-/**
- * Fetches route directions and travel time between two locations.
- */
 export const getDirections = async (
   origin: Location,
   destination: Location,
@@ -217,7 +219,7 @@ export const getDirections = async (
       },
     });
     if (response.data.status === "OK" && response.data.routes.length > 0) {
-      return response.data.routes[0].legs[0]; // Return the first leg of the first route
+      return response.data.routes[0].legs[0]; 
     }
     if (response.data.status === "ZERO_RESULTS") return { message: "No routes found", status: "ZERO_RESULTS" };
     return { message: response.data.error_message || `Failed to get directions: ${response.data.status}`, status: response.data.status };
@@ -226,9 +228,6 @@ export const getDirections = async (
   }
 };
 
-/**
- * Constructs a URL for a Google Static Maps API image.
- */
 export const getStaticMapUrl = (
   origin: Location,
   destination: Location,
@@ -244,8 +243,5 @@ export const getStaticMapUrl = (
     `markers=color:red|label:A|${origin.latitude},${origin.longitude}` +
     `&markers=color:green|label:M|${midpoint.latitude},${midpoint.longitude}` +
     `&markers=color:blue|label:B|${destination.latitude},${destination.longitude}`;
-  // Path can be added if needed, simplified for now
-  // const path = `path=color:0x0000ff|weight:5|${origin.latitude},${origin.longitude}|${midpoint.latitude},${midpoint.longitude}|${destination.latitude},${destination.longitude}`;
   return `${BASE_URL}/staticmap?size=${width}x${height}&${markers}&key=${GOOGLE_MAPS_API_KEY}`;
 };
-

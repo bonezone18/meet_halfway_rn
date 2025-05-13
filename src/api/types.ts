@@ -1,4 +1,4 @@
-import { Location, Place, PlaceSuggestion } from "../models/placeTypes";
+// import { Location, Place, PlaceSuggestion } from "../models/placeTypes"; // This was correctly commented out as unused in this file
 
 // Types for Google Geocoding API
 export interface GeocodingResponse {
@@ -15,7 +15,7 @@ export interface GeocodingResponse {
 
 // Types for Google Places API - Nearby Search
 export interface NearbySearchResponse {
-  results: Array<any>; // Raw place results, to be parsed into Place model
+  results: Array<any>; // Raw place results, to be parsed into Place model. Consider making this more specific if possible.
   status: string;
   error_message?: string;
   next_page_token?: string;
@@ -40,7 +40,49 @@ export interface AutocompleteResponse {
 
 // Types for Google Places API - Details
 export interface PlaceDetailsResponse {
-  result: any; // Raw place details, to be parsed into Place model
+  result: {
+    icon: string | undefined;
+    formatted_address?: string;
+    geometry: {
+      location: { lat: number; lng: number };
+      viewport?: {
+        northeast: { lat: number; lng: number };
+        southwest: { lat: number; lng: number };
+      };
+    };
+    name?: string;
+    place_id?: string;
+    photos?: Array<{
+      height?: number;
+      html_attributions?: string[];
+      photo_reference: string;
+      width?: number;
+    }>;
+    rating?: number;
+    user_ratings_total?: number;
+    opening_hours?: {
+      open_now?: boolean;
+      periods?: Array<{
+        close?: { day: number; time: string };
+        open?: { day: number; time: string };
+      }>;
+      weekday_text?: string[];
+    };
+    types?: string[];
+    vicinity?: string; // Often returned instead of formatted_address for some place types
+    website?: string;
+    international_phone_number?: string;
+    price_level?: number; // Typically 0-4
+    reviews?: Array<{
+      author_name?: string;
+      profile_photo_url?: string;
+      rating?: number;
+      relative_time_description?: string;
+      text?: string;
+      time?: number;
+    }>;
+    // Add any other fields you might request and use from the Google Places Details API
+  };
   status: string;
   error_message?: string;
 }
@@ -73,4 +115,3 @@ export interface ApiError {
   message: string;
   status?: string;
 }
-
