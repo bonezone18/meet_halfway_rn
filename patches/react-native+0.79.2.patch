@@ -1,0 +1,57 @@
+diff --git a/node_modules/react-native/Libraries/Core/registerCallableModule.js b/node_modules/react-native/Libraries/Core/registerCallableModule.js
+index 0a0951c..65d211e 100644
+--- a/node_modules/react-native/Libraries/Core/registerCallableModule.js
++++ b/node_modules/react-native/Libraries/Core/registerCallableModule.js
+@@ -4,26 +4,18 @@
+  * This source code is licensed under the MIT license found in the
+  * LICENSE file in the root directory of this source tree.
+  *
+- * @flow strict-local
+- * @format
++ * (Flow types removed for Metro compatibility)
+  */
+ 
+ 'use strict';
+ 
+-type Module = {...};
+-type RegisterCallableModule = (
+-  name: string,
+-  moduleOrFactory: Module | (void => Module),
+-) => void;
+-
+-const registerCallableModule: RegisterCallableModule = (function () {
++const registerCallableModule = (function () {
+   if (global.RN$Bridgeless === true) {
+     return (name, moduleOrFactory) => {
+       if (typeof moduleOrFactory === 'function') {
+         global.RN$registerCallableModule(name, moduleOrFactory);
+         return;
+       }
+-
+       global.RN$registerCallableModule(name, () => moduleOrFactory);
+     };
+   }
+@@ -34,9 +26,8 @@ const registerCallableModule: RegisterCallableModule = (function () {
+       BatchedBridge.registerLazyCallableModule(name, moduleOrFactory);
+       return;
+     }
+-
+     BatchedBridge.registerCallableModule(name, moduleOrFactory);
+   };
+ })();
+ 
+-export default registerCallableModule;
++module.exports = registerCallableModule;
+diff --git a/node_modules/react-native/index.js b/node_modules/react-native/index.js
+index 346b788..39bbf66 100644
+--- a/node_modules/react-native/index.js
++++ b/node_modules/react-native/index.js
+@@ -310,7 +310,7 @@ module.exports = {
+     return require('./Libraries/ReactNative/RootTag').RootTagContext;
+   },
+   // #endregion
+-} as ReactNativePublicAPI;
++}
+ 
+ if (__DEV__) {
+   /* $FlowFixMe[prop-missing] This is intentional: Flow will error when
